@@ -1295,6 +1295,23 @@ class OpsTest(PallasBaseTest):
 
     self.assertIn("x[0] = 4.2", output())
 
+  def test_debug_print_vector(self):
+    if not jtu.test_device_matches(["tpu"]):
+      self.skipTest("This test is for TPU only")
+
+    @functools.partial(
+        self.pallas_call,
+        out_shape=jax.ShapeDtypeStruct((2, 9, 129), jnp.int32),
+    )
+    def kernel(x_ref, o_ref):
+      pl.debug_print("{}", x_ref[...])
+      o_ref[...] = x_ref[...]
+
+    shape = (2, 9, 129)  # test a shape that is not aligned to 128
+    x = jnp.full(shape, 1, dtype=jnp.int32)
+    jax.block_until_ready(kernel(x))  # test if the execution is successful
+    jax.effects_barrier()
+
   @parameterized.parameters(
       ((2, 4), (8,)),
       ((2, 4), (8, 1)),
