@@ -75,7 +75,14 @@ def _broadcast_pytree_to(from_pytree, to_pytree):
 
 @jax_util.cache(trace_context_in_key=False)
 def _get_tpu_generation() -> int:
-  kind = jax.devices()[0].device_kind
+  device = jax.default_device.value
+  if device is None:
+    kind = jax.devices()[0].device_kind
+  elif isinstance(device, jax.Device):
+    kind = device.device_kind
+  else:
+    assert isinstance(device, str)
+    kind = device
   if kind.endswith(' lite'):
     kind = kind[:-len(' lite')]
   assert kind[:5] == "TPU v", kind
