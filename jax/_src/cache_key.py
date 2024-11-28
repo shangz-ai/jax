@@ -244,6 +244,7 @@ def _hash_serialized_compile_options(hash_obj, compile_options_obj,
   # Do not mess with the original CompileOptions object since it is passed to
   # the compiler. Create a deep copy for the purpose of cache key generation.
   compile_options_copy = copy.deepcopy(compile_options_obj)
+  compile_options_copy.env_option_overrides = list()
 
   # Certain debug options do not affect the compile result and thus, should not
   # be part of the cache key as their inclusion will result in unnecessary cache
