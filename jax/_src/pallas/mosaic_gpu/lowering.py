@@ -1531,7 +1531,7 @@ def _cond_lowering_rule(ctx: LoweringRuleContext, index, *args, branches):
         ctx.module_ctx, ctx.launch_ctx, branches[0].jaxpr, args
     )
     yielded = [
-        _ensure_ir_value(out, aval.dtype) or out
+        _ensure_ir_value(out, aval.dtype, default_value=out)
         for out, aval in zip(outs, ctx.avals_out)
     ]
     yielded_leaves, _ = jax.tree.flatten(yielded)
@@ -1557,7 +1557,7 @@ def _cond_lowering_rule(ctx: LoweringRuleContext, index, *args, branches):
       )
 
       yielded = [
-          _ensure_ir_value(out, aval.dtype) or out
+          _ensure_ir_value(out, aval.dtype, default_value=out)
           for out, aval in zip(outs, ctx.avals_out)
       ]
       yielded_leaves, yielded_treedef = jax.tree.flatten(yielded)
@@ -1638,7 +1638,7 @@ def _ensure_fa(x: object, dtype: jnp.dtype) -> mgpu.FragmentedArray:
   raise NotImplementedError(f"Unsupported type: {type(x)}")
 
 
-def _ensure_ir_value(x: object, dtype: jnp.dtype) -> ir.Value:
+def _ensure_ir_value(x: object, dtype: jnp.dtype, *, default_value=None) -> ir.Value:
   if isinstance(x, ir.Value):
     assert x.type == mgpu_utils.dtype_to_ir_type(dtype)
     return x
@@ -1647,7 +1647,10 @@ def _ensure_ir_value(x: object, dtype: jnp.dtype) -> ir.Value:
   elif isinstance(x, mgpu.FragmentedArray):
     if isinstance(x.layout, mgpu.WGSplatFragLayout):
       return x.registers.item()
-  raise NotImplementedError(f"Unsupported type: {type(x)}")
+  if default_value is not None:
+    return default_value
+  else:
+    raise NotImplementedError(f"Unsupported type: {type(x)}")
 
 
 def _ir_constant(v: object, t: ir.Type) -> ir.Value:
