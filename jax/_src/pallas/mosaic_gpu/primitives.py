@@ -738,3 +738,23 @@ def _broadcasted_iota_lowering(ctx: lowering.LoweringRuleContext, dtype, shape, 
 
 def broadcasted_iota(dtype, shape, dimension, *, layout: Layout | None = None):
   return broadcasted_iota_p.bind(dtype=jnp.dtype(dtype), shape=shape, dimension=dimension, layout=layout)
+
+
+optimization_barrier_p = jax_core.Primitive("optimization_barrier")
+optimization_barrier_p.multiple_results = True
+
+@optimization_barrier_p.def_abstract_eval
+def _optimization_barrier_abstract_eval(*args):
+  return args
+
+@lowering.register_lowering_rule(optimization_barrier_p)
+def _optimization_barrier_lowering(ctx: lowering.LoweringRuleContext, *args):
+  args = [
+      lowering._ensure_fa(arg, aval.dtype)
+      for arg, aval in zip(args, ctx.avals_in)
+  ]
+  return mgpu.optimization_barrier(*args)
+
+def optimization_barrier(*args):
+  results = optimization_barrier_p.bind(*args)
+  return results[0] if len(args) == 1 else results
